@@ -64,8 +64,7 @@ the audience feng shui belongs to.
 |---|---|
 | [`SETUP.md`](SETUP.md) | Credentials and first run |
 | [`REBUILD.md`](REBUILD.md) | Ordered prompts to recreate the Lens, plus the full gotcha list |
-| [`CLAD-PROMPT-LOG.md`](CLAD-PROMPT-LOG.md) | How CLAD was used — workflow, findings, and where the AI struggled |
-| [`CLAD-PROMPT-TRANSCRIPT.md`](CLAD-PROMPT-TRANSCRIPT.md) | Every prompt issued during the build, verbatim |
+| [`CLAD-PROMPT-LOG.md`](CLAD-PROMPT-LOG.md) | **How CLAD was used** — workflow, findings, where the AI struggled, plus every prompt verbatim in the appendix |
 
 ## Notes
 
