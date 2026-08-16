@@ -57,6 +57,11 @@ const API_KEY = "REPLACE_WITH_GOOGLE_AI_STUDIO_KEY"
 const BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/"
 const ANALYZE_MODEL = "gemini-2.5-flash"
 const IMAGE_MODEL = "gemini-3.1-flash-image"
+// Speech. Outputs PCM-16 LE mono at a FIXED 24 kHz — that rate is not a request
+// parameter, it is the model's contract, and it is why FengshuiVoice hardcodes
+// 24000 on the audio output provider. Multilingual: the spoken language follows
+// the language of the input text, so the 中文 mode needs no separate voice.
+const TTS_MODEL = "gemini-2.5-flash-preview-tts"
 
 // Verbatim from the proven demo pipeline
 const ANALYZE_PROMPT =
@@ -456,6 +461,48 @@ export class FengshuiGemini {
     if (first >= 0 && last > first) t = t.substring(first, last + 1)
     t = t.replace(/,\s*([}\]])/g, "$1")
     return t
+  }
+
+  /**
+   * Text → speech, as raw PCM bytes. Same transport as every other Gemini call
+   * here (RSG when USE_RSG, direct REST otherwise), so the master's voice is
+   * billed and authenticated exactly like his words are.
+   *
+   * Returns PCM-16 LE, mono, 24 kHz — the fixed output format of the Gemini TTS
+   * models, and precisely what FengshuiVoice's AudioOutputProvider path wants.
+   * Returns null (never throws) when the response carries no audio, so a mute
+   * master degrades to silence-with-a-log rather than an unhandled rejection in
+   * the middle of the ask flow.
+   *
+   * `style` is prepended to the text rather than passed as a parameter: Gemini
+   * TTS is prompt-controlled — there is no instructions field — and a natural
+   * language directive ahead of the line is how delivery is directed. Keep the
+   * directive in the SAME language as the text; an English directive in front of
+   * Chinese input has the model read the Chinese with an English voice, or read
+   * the directive aloud.
+   */
+  async ttsPcm(text: string, voice: string, style: string): Promise<Uint8Array | null> {
+    const spoken = (text || "").trim()
+    if (!spoken) return null
+    const body = {
+      contents: [{parts: [{text: style ? style + "\n\n" + spoken : spoken}], role: "user"}],
+      generationConfig: {
+        responseModalities: ["AUDIO"],
+        speechConfig: {voiceConfig: {prebuiltVoiceConfig: {voiceName: voice}}},
+      },
+    }
+    const resp: any = await this.post(TTS_MODEL, body)
+    const parts = resp && resp.candidates && resp.candidates[0] &&
+      resp.candidates[0].content && resp.candidates[0].content.parts
+    const b64 = parts && parts[0] && parts[0].inlineData && parts[0].inlineData.data
+    if (!b64) {
+      // Name the reason when the API gave one — a safety block and an auth
+      // failure look identical from "no audio came back".
+      const fb = resp && resp.promptFeedback ? JSON.stringify(resp.promptFeedback) : ""
+      print("[FengshuiGemini] TTS returned no audio" + (fb ? " — promptFeedback: " + fb : ""))
+      return null
+    }
+    return Base64.decode(b64)
   }
 
   // Two transports, same request/response shape. RSG proxies through Snap's gateway

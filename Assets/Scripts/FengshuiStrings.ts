@@ -87,6 +87,7 @@ export interface Pack {
   assessFirstThenAsk: string
   consultingMaster: string
   nothingHeard: string
+  noSpeechDetected: string
   masterHasSpoken: string
   askFailed: (e: string) => string
   noPastQuestions: string
@@ -203,6 +204,7 @@ const EN: Pack = {
   assessFirstThenAsk: "Assess your room first, then ask the master",
   consultingMaster: "Consulting the master…",
   nothingHeard: "Nothing heard — hold the mic and speak",
+  noSpeechDetected: "No speech detected — check the microphone",
   masterHasSpoken: "The master has spoken",
   askFailed: (e) => "Ask failed: " + e,
   noPastQuestions: "No past questions yet — hold the mic to ask",
@@ -327,6 +329,7 @@ const ZH: Pack = {
   assessFirstThenAsk: "请先评估房间，再请教大师",
   consultingMaster: "正在请教大师…",
   nothingHeard: "未听清，请长按麦克风说话",
+  noSpeechDetected: "未检测到语音，请检查麦克风",
   masterHasSpoken: "大师已作答",
   askFailed: (e) => "提问失败：" + e,
   noPastQuestions: "尚无提问记录，长按麦克风提问",
@@ -421,11 +424,53 @@ export function getLang(): Lang {
 }
 
 /**
- * The BCP-47 tag for the active language, for ASR and TTS. Mandarin is
+ * The BCP-47 tag for the active language. Speech recognition does NOT use this
+ * — see voiceMlLanguageCode() below for the underscore form VoiceML needs.
+ * Mandarin is
  * requested as zh-CN (Simplified, mainland) to match the strings above.
  */
 export function localeTag(): string {
   return ensureLoaded() === "zh" ? "zh-CN" : "en-US"
+}
+
+/**
+ * The language code handed to VoiceML.ListeningOptions.languageCode.
+ *
+ * NOT localeTag(). VoiceML wants the UNDERSCORE form ("en_US"), while
+ * localeTag() returns the BCP-47 hyphen form ("en-US") that the TTS side reads.
+ * They looked interchangeable and are not — a hyphenated code is not recognised.
+ *
+ * MANDARIN IS NOT SUPPORTED. This was tested, not assumed. Setting
+ * languageCode = "zh_CN" and holding the mic produces, every time:
+ *
+ *   [Fengshui] voice started (lang=zh_CN, ready=true)
+ *   [Fengshui] VoiceML error: bad input
+ *   [Fengshui] VoiceML error: CANCELLED
+ *   ...repeating, no transcript events at all
+ *
+ * "bad input" is VoiceML rejecting the language code itself. `languageCode` is
+ * typed as a bare `string` in StudioLib with no enum and no validation, so
+ * nothing catches this at compile time and the only symptom is a mic that never
+ * hears anything — the exact failure this whole change exists to remove.
+ *
+ * So Chinese mode listens in English. The UI, the prompts and the master's
+ * spoken reply are all still Chinese; only the RECOGNISER is English, which
+ * means a Mandarin question will not transcribe correctly. That is a real
+ * limitation, deliberately chosen over a code that fails silently.
+ *
+ * If a supported Mandarin code ever appears, set it here — one line, and the
+ * per-press options in FengshuiMain pick it up with no other change.
+ */
+const ZH_VOICEML_CODE: string | null = null
+
+export function voiceMlLanguageCode(): string {
+  if (ensureLoaded() === "zh" && ZH_VOICEML_CODE) return ZH_VOICEML_CODE
+  return "en_US"
+}
+
+/** True when the mic is listening in a language the UI has NOT confirmed works. */
+export function voiceMlLanguageIsFallback(): boolean {
+  return ensureLoaded() === "zh" && !ZH_VOICEML_CODE
 }
 
 /** Human name of the active language, for the prompt directive. */

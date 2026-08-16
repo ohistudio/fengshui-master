@@ -1,54 +1,74 @@
 # Fengshui Master
 
-A Specs (Snap AR glasses) Lens that reads the feng shui of the room you're standing in.
+**A Specs AR Lens that reads the feng shui of the room you're standing in — then helps you fix it.**
 
-One pinch captures your space. Gemini scores its chi out of 100, names the blockers it can
-actually see, and repaints the room to show you the fix — with a second AI pass that verifies
-the repaint applied those changes before you're shown it. You get a **Chi Plan**: a checklist
-of what to move, remove or add in the real room. Tidy up, assess again, watch the score climb.
+Look at any room and pinch once. Gemini scores its chi out of 100, names the blockers it can
+actually see, and pins each problem onto the real object causing it. It then repaints your room
+to show the fix — with a second AI pass verifying that repaint applied the changes before you're
+shown it. You get a **Chi Plan**: what to move, what to clear, what to add. Do it for real,
+assess again, and watch your score climb toward a target.
 
-Built with **CLAD** (Claude + the Lens Studio MCP server). See `CLAD-PROMPT-LOG.md`.
+Built with **CLAD** — Claude driving Lens Studio through MCP. See
+[`CLAD-PROMPT-LOG.md`](CLAD-PROMPT-LOG.md).
+
+## Demo video
+
+[`docs/fengshui-master-demo.mp4`](docs/fengshui-master-demo.mp4) — one-minute walkthrough.
+
+## The theme
+
+The weekly theme was *build a spatial experience that helps people organize, plan, or be more
+productive*. Feng shui is, literally, the practice of organising space. Fengshui Master turns
+"something about this room feels wrong" into a prioritised, checkable plan — then closes the
+loop: tidy the real room, assess again, watch the number move. It isn't a reading you look at
+once. It's **assess → plan → act → re-assess**, with your best score kept across sessions so
+progress is measurable.
+
+## Who it's for
+
+Anyone whose space feels off but who doesn't know what to change — renters, students, people
+working from home, anyone in a small or cluttered room. It gives non-experts an expert's eye and
+a concrete next action instead of vague advice. The Chinese-language mode also makes it native to
+the audience feng shui belongs to.
 
 ## Features
 
-- One-pinch pipeline: capture → analyse → repaint → AI QA-verify, with a tightened retry
-- Chi score, band verdict, target score, best-score history across sessions
-- Five-element (五行) balance readout
-- Chi Plan — the fixes as a tappable checklist
-- World-anchored problem markers, depth-snapped onto real surfaces
-- Chi-flow particles that congest at blockages and clear on improvement
-- Spatialised 3D view of the improved room
-- **Scan Whole Room** — turn on the spot; four views gated on head rotation, with a
-  browsable gallery and per-view commentary
-- **Ask the Master** — hold-to-talk voice questions answered against your actual room
-- Shop tab with real products and in-Lens checkout
-- Full **English / 中文** toggle: UI, model output, voice and speech input, persisted
-- Custom theme and generated icon
+- **One-pinch pipeline** — capture → analyse → repaint → AI QA-verify, with a tightened retry when edits are missed
+- **Chi score** with band verdict, target score, and best-score history across sessions
+- **Five-element (五行) balance** readout
+- **Chi Plan** — the fixes as a tappable checklist for the real room
+- **World-anchored problem markers**, depth-snapped onto real surfaces
+- **Chi-flow particles** that congest and turn ember at blockages, then clear on improvement
+- **Spatialised 3D view** of the improved room
+- **Scan Whole Room** — turn on the spot; four views gated on head rotation, with a browsable gallery and per-view commentary
+- **Ask the Master** — hold-to-talk voice questions answered against your actual room, with an archive of past asks
+- **Shop** — real products with in-Lens checkout
+- **English / 中文** throughout: UI, model output, spoken voice, persisted between sessions
+- Custom theme, Barlow typography, generated icon
 
 ## Requirements
 
 - Lens Studio **5.22+** (developed on 5.23.1)
-- A Snap account signed in to Lens Studio (for Remote Service Gateway access)
-- Specs hardware for depth-snapped markers, compass directions and on-device capture;
-  the editor preview runs everything else
+- A Snap account signed in to Lens Studio, for Remote Service Gateway access
+- Specs hardware for depth-snapped markers, compass directions and on-device capture — the editor preview runs everything else
 
 ## Getting started
 
 1. Clone and open `Fengshui.esproj` in Lens Studio.
-2. Follow **`SETUP.md`** to supply Remote Service Gateway tokens — the repo ships with none.
+2. Follow **[`SETUP.md`](SETUP.md)** to supply Remote Service Gateway tokens — this repo ships with none.
 3. Press **Assess my Room** in the preview.
 
 ## Documentation
 
 | File | What it is |
 |---|---|
-| `SETUP.md` | Credentials and first run |
-| `REBUILD.md` | Ordered prompts to recreate the Lens, plus the full gotcha list |
-| `CLAD-PROMPT-LOG.md` | How CLAD was used — workflow, findings, what the AI struggled with |
-| `CLAD-PROMPT-TRANSCRIPT.md` | Every prompt issued during the build, verbatim |
+| [`SETUP.md`](SETUP.md) | Credentials and first run |
+| [`REBUILD.md`](REBUILD.md) | Ordered prompts to recreate the Lens, plus the full gotcha list |
+| [`CLAD-PROMPT-LOG.md`](CLAD-PROMPT-LOG.md) | How CLAD was used — workflow, findings, and where the AI struggled |
+| [`CLAD-PROMPT-TRANSCRIPT.md`](CLAD-PROMPT-TRANSCRIPT.md) | Every prompt issued during the build, verbatim |
 
 ## Notes
 
 `Cache/` and `Support/` are generated by Lens Studio and are not tracked; they rebuild on open.
-IKEA product names and imagery are used illustratively for a hackathon demo and are not a
-partnership — replace before any public release.
+IKEA product names and imagery are used illustratively for a hackathon demo and do not represent
+a partnership — replace before any public release.

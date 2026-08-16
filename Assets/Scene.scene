@@ -230,6 +230,7 @@
       spatialImage: !<reference.ScriptComponent> 0b7c4cac-2c55-40b0-9f2c-f072855e4f01
       spatialImageObject: !<reference.SceneObject> c5ab5e28-3848-48d0-95a0-bc06624f4087
       depthCache: !<MappingBased.AssignableType_2> e4794d17-de7e-4685-ac7d-cd21ad81df02
+      voiceML: !<reference.VoiceMLModule> 16f351ae-407c-4aa5-8e2e-ab916f97851f
   ScriptTypes:
     "":
       {}

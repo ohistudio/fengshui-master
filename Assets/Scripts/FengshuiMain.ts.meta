@@ -32,6 +32,7 @@
     spatialImage: false
     spatialImageObject: false
     uiHud: false
+    voiceML: false
   ScriptTypesHidden:
     {}
   ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
@@ -45,6 +46,7 @@
       spatialImage: !<reference.ScriptComponent> 00000000-0000-0000-0000-000000000000
       spatialImageObject: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
       depthCache: !<MappingBased.AssignableType_2> 00000000-0000-0000-0000-000000000000
+      voiceML: !<reference.VoiceMLModule> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
@@ -53,3 +55,4 @@
     - // @input Component.ScriptComponent spatialImage
     - // @input SceneObject spatialImageObject
     - // @input AssignableType_2 depthCache
+    - // @input Asset.VoiceMLModule voiceML

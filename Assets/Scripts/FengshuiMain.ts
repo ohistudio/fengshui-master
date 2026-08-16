@@ -14,7 +14,10 @@ import {FengshuiCompass} from "./FengshuiCompass"
 import {FengshuiIkea} from "./FengshuiIkea"
 import {CommerceKit} from "CommerceKit.lspkg/CommerceKit"
 import {DepthCache} from "./DepthCache"
-import {S, getLang, setLang, localeTag, directionName, describeRemoteAuthError} from "./FengshuiStrings"
+import {
+  S, getLang, setLang, localeTag, directionName, describeRemoteAuthError,
+  voiceMlLanguageCode,
+} from "./FengshuiStrings"
 import WorldCameraFinderProvider from "SpectaclesInteractionKit.lspkg/Providers/CameraProvider/WorldCameraFinderProvider"
 import {RemoteServiceGatewayCredentials, AvaliableApiTypes} from "RemoteServiceGateway.lspkg/RemoteServiceGatewayCredentials"
 
@@ -74,11 +77,22 @@ const ASK_HISTORY_MAX = 10
 // edges — that is the "cuts the image off a bit". Off shows the full photo.
 // Flip back to true if the portal look is wanted more than the full frame.
 const SPATIAL_FRAME_ON = false
-// "Depth of feel" — how far the depth mesh displaces. The package default is
-// 100; the flat look was partly this being left at the authored value and
-// partly the staleness bug described in handleSpatialize. Single tuning knob:
-// raise for more parallax, lower if the room starts to look stretched/torn.
-const SPATIAL_DEPTH_SCALE = 175
+// "Depth of feel" — how far the depth mesh displaces. Package default is 100
+// (`// @input int _depthScale = "100"` in Spatial Image.ts).
+//
+// HISTORY, so this does not get bumped back up. It was raised to 175 to fix a
+// flat-looking result. But that flatness had TWO causes: this value, and the
+// material-staleness bug described in handleSpatialize, which was landing the
+// write on the wrong material so it silently did nothing. Once the staleness
+// bug was fixed the write started actually applying — at which point 175 was
+// compensation for a bug that no longer existed, and the room rendered visibly
+// stretched and torn.
+//
+// So: back to the package default, which is the value the effect was tuned for.
+// Single tuning knob — nudge up in small steps (110, 120) if it reads flat, but
+// treat anything near 175 as a sign the staleness bug has regressed rather than
+// as a legitimate depth setting.
+const SPATIAL_DEPTH_SCALE = 100
 // Deliberately NOT overriding frameHeight. Raising it to 150 was tried and
 // blew the image past the edges of the view — the window size authored on the
 // SpatialAfter object is already right, and the reported clipping was the
@@ -112,11 +126,29 @@ export class FengshuiMain extends BaseScriptComponent {
   @allowUndefined
   depthCache: DepthCache
 
-  // Typed require — NOT `as any`. Casting hides the one bug that silently kills
-  // this feature: AsrTranscriptionOptions.create() must come off the GLOBAL
-  // AsrModule namespace, not off this instance (instance access returns
-  // undefined and the mic just never opens).
-  private asrModule: AsrModule = require("LensStudio:AsrModule")
+  // Speech-to-text for "Ask the Master".
+  //
+  // This is a VoiceMLModule ASSET wired in the Inspector (Assets/VoiceML
+  // Module.voiceMLModule), NOT a require(). That distinction is the entire fix:
+  // the previous implementation used AsrModule via
+  // require("LensStudio:AsrModule"), which needs no asset — and which fails at
+  // the NATIVE layer in the Lens Studio preview with no JavaScript error at all.
+  // Every hold produced, in the LS log and nowhere else:
+  //
+  //   AsrTranscriberLancelot::startListening -> ERROR: update is null
+  //   speech::transcribe::grpc::GrpcStreamCallback] Failure: CANCELLED
+  //   Pipe was already closed.
+  //
+  // No onTranscriptionErrorEvent ever fired, so the Lens sat on "Listening…"
+  // forever and the failure was repeatedly mistaken for success. VoiceML is
+  // marked @deprecated in StudioLib in favour of ASR, and that deprecation is
+  // exactly what led someone to "fix" this the wrong way round — but deprecated
+  // and working beats current and silently dead. VoiceML transcribes in this
+  // preview today (proven in the Whenabouts Lens); ASR does not.
+  @input
+  @allowUndefined
+  voiceML!: VoiceMLModule
+
   private internetModule: InternetModule = require("LensStudio:InternetModule")
   private remoteMediaModule: RemoteMediaModule = require("LensStudio:RemoteMediaModule")
   private gemini!: FengshuiGemini
@@ -145,12 +177,15 @@ export class FengshuiMain extends BaseScriptComponent {
   private thumbLoading = false
 
   // Ask-the-master state
-  private asrOptions: AsrModule.AsrTranscriptionOptions | null = null
+  private voiceBound = false   // onListeningUpdate subscribed (ONCE, not per press)
+  private voiceReady = false   // onListeningEnabled has fired — mic permission granted
   private micHeld = false      // button is physically down
   private askGrace = false     // released, still collecting a trailing final
   private askFinal = ""        // concatenated finalized utterances
   private askPartial = ""      // the interim tail currently being spoken
   private askTranscript = ""   // askFinal + askPartial, what actually gets sent
+  private heardAnything = false // any transcript event at all since the mic opened
+  private micWatchdog: DelayedCallbackEvent | null = null
 
   // Pan-scan gallery. Index 0 is the whole-room verdict; 1..N are the captured
   // views, so the user can page through exactly what the scan saw.
@@ -186,7 +221,9 @@ export class FengshuiMain extends BaseScriptComponent {
 
     this.gemini = new FengshuiGemini(this.internetModule)
     this.camera = new FengshuiCameraService()
-    this.voice = new FengshuiVoice(this.internetModule, this.sceneObject)
+    // `this` is passed so the voice can schedule its own clip-end stop, and the
+    // gemini instance so speech goes out over the same RSG transport as the text.
+    this.voice = new FengshuiVoice(this.internetModule, this.sceneObject, this, this.gemini)
     this.history = new FengshuiHistory()
 
     // Background bed starts as the Lens loads (loops forever, well under SFX level)
@@ -278,9 +315,10 @@ export class FengshuiMain extends BaseScriptComponent {
       } catch (e) {
         print("[Fengshui] camera transform unavailable (drag-facing disabled): " + e)
       }
-      // ASR options + their event subscriptions are built ONCE, here in
-      // OnStartEvent (never onAwake), and reused for every hold.
-      this.setupAsr()
+      // VoiceML event subscriptions are bound ONCE, here in OnStartEvent (never
+      // onAwake), and reused for every hold. The per-hold ListeningOptions are
+      // built in handleAskStart so the language toggle can steer them.
+      this.setupVoice()
     })
 
     // While the user pinch-drags the cluster (grab handle), keep it yawed toward
@@ -661,67 +699,138 @@ export class FengshuiMain extends BaseScriptComponent {
     }
   }
 
-  // ═══ Ask the master (hold-to-talk ASR → Gemini) ════════════════════════════
+  // ═══ Ask the master (hold-to-talk VoiceML → Gemini) ════════════════════════
 
   /**
-   * Build the ASR session options once and subscribe here in OnStartEvent.
-   * The same options object is handed to every startTranscribing() call, so the
-   * handlers are registered exactly once — re-creating options per hold would
-   * stack duplicate subscriptions.
+   * Subscribe to the VoiceML module's events ONCE, here in OnStartEvent.
+   *
+   * The subscriptions live on the MODULE, not on the options object (which is
+   * where ASR put them). That is why this binds once and never again: every
+   * hold re-creates ListeningOptions — cheap, and the only way the language
+   * toggle can take effect mid-session — but re-binding onListeningUpdate per
+   * press would stack a duplicate handler on every press and multiply the
+   * transcript.
    */
-  private setupAsr(): void {
+  private setupVoice(): void {
+    if (this.voiceBound) return
+    if (!this.voiceML || isNull(this.voiceML)) {
+      // Not a soft warning. With no module wired there is no speech path at all,
+      // and the mic button will refuse on press rather than pretending to listen.
+      print("[Fengshui] VoiceML module NOT wired — ask-the-master mic disabled. " +
+        "Wire Assets/VoiceML Module.voiceMLModule to FengshuiMain's voiceML input.")
+      return
+    }
+    const vml = this.voiceML as any
     try {
-      // GLOBAL namespace, not `this.asrModule.AsrTranscriptionOptions` — see the
-      // field comment. The same applies to AsrMode below.
-      const opts = AsrModule.AsrTranscriptionOptions.create()
-      opts.mode = AsrModule.AsrMode.HighAccuracy
-      // Long enough that a natural mid-question pause doesn't terminate the
-      // utterance while the user is still holding the button.
-      opts.silenceUntilTerminationMs = 2000
-      opts.onTranscriptionUpdateEvent.add((ev: AsrModule.TranscriptionUpdateEvent) =>
-        this.onTranscript(ev))
-      opts.onTranscriptionErrorEvent.add((code: AsrModule.AsrStatusCode) =>
-        this.onTranscriptError(code))
-      this.asrOptions = opts
-      print("[Fengshui] ASR ready (mode=HighAccuracy)")
+      vml.onListeningUpdate.add((ev: VoiceML.ListeningUpdateEventArgs) => this.onVoiceUpdate(ev))
+      vml.onListeningError.add((ev: VoiceML.ListeningErrorEventArgs) => this.onVoiceError(ev))
+      // Mic permission granted + microphone actually initialised. Snap's own
+      // guidance is to treat this as the readiness gate for startListening.
+      //
+      // Log on the TRANSITION only. onListeningEnabled fires EVERY FRAME while
+      // the mic is available, not once on grant — printing unconditionally here
+      // buried the whole log under thousands of identical lines and made the
+      // real transcript events impossible to find.
+      vml.onListeningEnabled.add(() => {
+        if (this.voiceReady) return
+        this.voiceReady = true
+        print("[Fengshui] VoiceML ready (mic enabled)")
+      })
+      vml.onListeningDisabled.add(() => {
+        if (!this.voiceReady) return
+        this.voiceReady = false
+        print("[Fengshui] VoiceML mic disabled (permission withdrawn)")
+      })
+      this.voiceBound = true
+      print("[Fengshui] VoiceML bound")
     } catch (e) {
-      this.asrOptions = null
-      print("[Fengshui] ASR setup failed — ask disabled: " + e)
+      print("[Fengshui] VoiceML bind failed — ask disabled: " + e)
     }
   }
 
-  private static ASR_STATUS_NAMES = ["Success", "InternalError", "Unauthenticated", "NoInternet"]
-
-  private onTranscript(ev: AsrModule.TranscriptionUpdateEvent): void {
+  private onVoiceUpdate(ev: VoiceML.ListeningUpdateEventArgs): void {
     // Accept updates while held AND through the short post-release grace window,
     // so a final that lands just after the user lets go still counts.
     if (!this.micHeld && !this.askGrace) return
-    const text = ev.text ?? ""
-    if (ev.isFinal) {
-      this.askFinal += (this.askFinal ? " " : "") + text
+    if (!ev) return
+    const args = ev as any
+    const text = args.transcription ? ("" + args.transcription).trim() : ""
+    const isFinal = !!args.isFinalTranscription
+    // Any event at all — even an empty interim — proves the pipe is alive, which
+    // is what the watchdog below is actually testing for.
+    this.heardAnything = true
+    if (isFinal) {
+      if (text) this.askFinal += (this.askFinal ? " " : "") + text
       this.askPartial = ""
     } else {
       this.askPartial = text
     }
     const live = (this.askFinal + " " + this.askPartial).trim()
     this.askTranscript = live
-    print("[Fengshui] ASR update isFinal=" + ev.isFinal + " text='" + text + "'")
+    print("[Fengshui] voice update isFinal=" + isFinal + " text='" + text + "'")
     // Live feedback: stream the PARTIAL into the status line — don't wait for
-    // isFinal, or the user watches a dead status bar while they talk.
+    // the final, or the user watches a dead status bar while they talk.
     if (this.micHeld) {
       this.uiHud.setStatus(live ? this.tailClip(live, 58) : S().listening)
     }
   }
 
-  private onTranscriptError(code: AsrModule.AsrStatusCode): void {
-    const name = FengshuiMain.ASR_STATUS_NAMES[code] ?? ("code " + code)
-    print("[Fengshui] ASR error: " + name + " (" + code + ")")
+  private onVoiceError(ev: VoiceML.ListeningErrorEventArgs): void {
+    // Verbatim, never a generic "failed" — VoiceML's own description is the whole
+    // diagnosis (permission, no network, "bad input" = rejected languageCode).
+    const args = (ev || {}) as any
+    const desc = args.description ? "" + args.description : "unknown"
+    const code = args.code !== undefined && args.code !== null ? " (" + args.code + ")" : ""
+
+    // A rejected session RETRIES INTERNALLY, forever, and re-fires this handler
+    // on every attempt — an unsupported languageCode produced an unbounded
+    // "bad input"/"CANCELLED" pair roughly twice a second that outlived the
+    // button press and buried the log. So: tear the session down explicitly,
+    // and report only the FIRST error of a press.
+    const firstOfPress = this.micHeld || this.askGrace
     this.micHeld = false
     this.askGrace = false
+    this.cancelMicWatchdog()
+    try {
+      this.voiceML.stopListening()
+    } catch (e) {}
+    if (!firstOfPress) return
+
+    print("[Fengshui] VoiceML error: " + desc + code)
     this.uiHud.setMicActive(false)
-    // Verbatim status code, never a generic "failed" — the code is the whole
-    // diagnosis (Unauthenticated = sign in, NoInternet = connect, etc).
-    this.uiHud.setStatus(S().micError(name))
+    this.uiHud.setStatus(S().micError(desc))
+  }
+
+  // ── No-speech watchdog ──────────────────────────────────────────────────────
+  // The old failure was indistinguishable from thinking: the mic lit, the status
+  // said "Listening…", and nothing ever came back. Silence now has a deadline.
+  private static MIC_WATCHDOG_S = 3.5
+
+  private armMicWatchdog(): void {
+    this.cancelMicWatchdog()
+    const wd = this.createEvent("DelayedCallbackEvent")
+    wd.bind(() => {
+      this.micWatchdog = null
+      // Only complain if the mic is genuinely still open and NOTHING has arrived.
+      // A user who is simply holding the button in a quiet room mid-thought gets
+      // the same message, which is correct — it names the thing to check rather
+      // than leaving a lit button and no explanation.
+      if ((this.micHeld || this.askGrace) && !this.heardAnything) {
+        print("[Fengshui] no transcript " + FengshuiMain.MIC_WATCHDOG_S + "s after mic open")
+        this.uiHud.setStatus(S().noSpeechDetected)
+      }
+    })
+    wd.reset(FengshuiMain.MIC_WATCHDOG_S)
+    this.micWatchdog = wd
+  }
+
+  private cancelMicWatchdog(): void {
+    if (this.micWatchdog) {
+      // reset(-1) is the documented way to disarm a DelayedCallbackEvent without
+      // destroying it; the handler simply never fires.
+      try { this.micWatchdog.reset(-1) } catch (e) {}
+      this.micWatchdog = null
+    }
   }
 
   /** Button DOWN — open the mic. */
@@ -733,7 +842,7 @@ export class FengshuiMain extends BaseScriptComponent {
       this.uiHud.setStatus(S().masterStillWorking)
       return
     }
-    if (!this.asrOptions) {
+    if (!this.voiceBound) {
       this.uiHud.setStatus(S().micUnavailable)
       return
     }
@@ -745,17 +854,35 @@ export class FengshuiMain extends BaseScriptComponent {
     this.askFinal = ""
     this.askPartial = ""
     this.askTranscript = ""
+    this.heardAnything = false
     this.micHeld = true
     this.uiHud.setMicActive(true)
     this.uiHud.setStatus(S().listening)
     try {
-      this.asrModule.startTranscribing(this.asrOptions)
-      print("[Fengshui] ASR started")
+      // Options are built PER PRESS, on purpose: languageCode is read from the
+      // live EN/中文 toggle, so a mid-session switch takes effect on the next
+      // hold rather than on the next Lens restart.
+      const VML: any = (global as any).VoiceML
+      const options: any = VML.ListeningOptions.create()
+      // Both flags are REQUIRED. Without shouldReturnAsrTranscription there is
+      // no transcript at all (VoiceML defaults to NLP-only output and the
+      // ListeningUpdate arrives with an empty `transcription`); without the
+      // interim flag the status line stays dead until the user lets go.
+      options.shouldReturnAsrTranscription = true
+      options.shouldReturnInterimAsrTranscription = true
+      const lang = voiceMlLanguageCode()
+      options.languageCode = lang
+      this.voiceML.startListening(options)
+      // Log `lang`, not options.languageCode — reading the property back trips
+      // another deprecation warning for no benefit.
+      print("[Fengshui] voice started (lang=" + lang + ", ready=" + this.voiceReady + ")")
+      this.armMicWatchdog()
     } catch (e) {
       this.micHeld = false
+      this.cancelMicWatchdog()
       this.uiHud.setMicActive(false)
       this.uiHud.setStatus(S().micError(String(e)))
-      print("[Fengshui] startTranscribing threw: " + e)
+      print("[Fengshui] startListening threw: " + e)
     }
   }
 
@@ -765,22 +892,25 @@ export class FengshuiMain extends BaseScriptComponent {
     this.micHeld = false
     this.askGrace = true
     this.uiHud.setMicActive(false)
-    this.uiHud.setStatus("Consulting the master…")
-    // Grace window before stopping: stopTranscribing() DISCARDS the session, so
-    // calling it on the release frame can throw away a final that is milliseconds
-    // out. Wait, collect, then stop and submit.
+    this.uiHud.setStatus(S().consultingMaster)
+    // Grace window before stopping: a final transcript routinely lands a few
+    // hundred ms after the button comes up. Wait, collect, then stop and submit.
     const grace = this.createEvent("DelayedCallbackEvent")
     grace.bind(() => {
       this.askGrace = false
+      this.cancelMicWatchdog()
       try {
-        this.asrModule.stopTranscribing()
-          .catch((e: any) => print("[Fengshui] stopTranscribing rejected: " + e))
+        this.voiceML.stopListening()
       } catch (e) {
-        print("[Fengshui] stopTranscribing threw: " + e)
+        print("[Fengshui] stopListening threw: " + e)
       }
       const question = (this.askTranscript || DEV_CANNED_QUESTION).trim()
       if (!question) {
-        this.uiHud.setStatus(S().nothingHeard)
+        // Distinguish the two silences. Nothing on the wire at all = the mic or
+        // the service is the problem; events arrived but carried no words = the
+        // user genuinely said nothing into a working mic.
+        this.uiHud.setStatus(this.heardAnything ? S().nothingHeard : S().noSpeechDetected)
+        print("[Fengshui] ask submitted nothing (heardAnything=" + this.heardAnything + ")")
         return
       }
       this.submitAsk(question)
@@ -1356,13 +1486,15 @@ export class FengshuiMain extends BaseScriptComponent {
    * Language toggle. Flips the string table, which re-renders every bound label,
    * and steers the model prompts and the spoken voice via S()/localeTag().
    *
-   * ASR needs NO action here, and deliberately gets none. AsrTranscriptionOptions
-   * exposes only `mode` and `silenceUntilTerminationMs` — there is no locale or
-   * languageCode field on it (the `languageCode` in StudioLib belongs to the
-   * deprecated VoiceML.ListeningOptions, a different API). AsrModule detects the
-   * spoken language itself and handles mixed input, so Mandarin questions
-   * transcribe without being told to expect them. Adding a locale setting here
-   * would be a control that does nothing.
+   * Speech recognition needs no action HERE, but it is no longer language-blind:
+   * the mic now runs on VoiceML, whose ListeningOptions DO carry a languageCode,
+   * and handleAskStart reads it from this toggle on every press
+   * (voiceMlLanguageCode() in FengshuiStrings). Switching language therefore
+   * takes effect on the next hold, with no restart.
+   *
+   * The previous note here — "AsrModule detects the spoken language itself, so a
+   * locale setting would do nothing" — described the ASR path that never
+   * transcribed anything at all in this preview. See the voiceML field comment.
    *
    * Findings already on screen are model output in the OLD language and stay as
    * they are; the next assess or scan comes back in the new one.
