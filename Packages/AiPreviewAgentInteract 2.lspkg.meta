@@ -1,0 +1,34 @@
+- !<AssetImportMetadata/3f71a6a0-a067-4424-815c-eff11ba22d21>
+  ImportedAssetIds:
+    729c7428-a77e-46aa-8782-6f8fcc883fd9: !<reference> 09f7c82e-3618-4882-b32a-ab05f6b9b2c2
+    0218717c-732f-43ef-a466-03102cc09b76: !<reference> 19b3a890-5253-4fe4-8489-2cc52d9c93ad
+    b35dfacf-2be7-4006-ab09-9f0ef556da18: !<reference> da6109ec-ab90-4eb2-a863-5620751cb0ec
+    9c10d09f-bcd5-4004-bf6e-3488f44c8a0c: !<reference> 63fecc0d-360e-4531-badd-0246abd415b5
+    aaa490d2-430d-46a6-84bf-5a552e6471be: !<reference> 934f6d77-89e3-492e-b97d-0f0a0229178d
+    d09586c7-7836-4e4a-b313-5dc0b37856d6: !<reference> cb01b913-f138-41cf-9bcd-f7d58136d972
+    850f18c7-4283-45fe-b6f5-33aab72cf1a0: !<reference> 9dbcde44-8936-4e66-9bf1-d31842e69039
+    073db115-e6c3-4329-af18-d254ece7987f: !<reference> f0273f88-c225-4acf-8646-d3a9fb8f12ce
+    29091811-e792-46be-bfa4-28ddec5f11be: !<reference> ffc2daf6-c7ed-47e5-9b78-58cfd21f33fe
+    7e66c972-00d6-4207-bc88-d04fbba61bef: !<reference> 85b44284-f827-46ce-bccb-2d1514f0be28
+    427945d7-1818-4980-a2b8-b06fa79d8650: !<reference> f9ab1379-34b2-466e-8433-10a8320d703e
+    7c9bb114-af03-47f2-98f1-2ada2729b89e: !<reference> e77b3218-be65-422f-84ef-9bae1c9a0764
+    b9d1daaf-017a-4721-8443-2aee3d46fd9b: !<reference> ddd35b34-4244-424c-b357-f1632818af90
+    f17be175-20a9-4ba6-98db-6843251fca44: !<reference> 8ff9fa8d-8452-449c-a133-9fe4d905377c
+    a738c53c-03e1-4563-9262-cdbd892a3915: !<reference> b10cadd4-bc18-4c48-9ff1-6d036fa4d5a0
+    8b2becc1-66e2-4669-86c2-c16ab206b910: !<reference> d184289d-2875-4282-b691-fdb67c5427bf
+    58ed2be2-cd6d-484f-9adf-32fa88eb97b0: !<reference> 52822a8f-6de1-497f-a946-a778d83e0e88
+    90f26a75-3640-44c3-bf3a-f06d5818b4a4: !<reference> 1d3cdfca-c6e5-4e80-b9bc-c673d493f460
+    3960d294-c601-4b2e-b6a0-6ff262c7c197: !<reference> e339769d-1401-4694-9fd2-bd8d09260c93
+  ImporterName: NativePackageImporter
+  PrimaryAsset: !<reference> 85b44284-f827-46ce-bccb-2d1514f0be28
+  PackageType: PackedNativePackageRoot
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    {}
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000

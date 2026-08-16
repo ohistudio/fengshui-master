@@ -1,0 +1,19 @@
+# Lens Studio — generated, regenerated on open
+Cache/
+Support/
+
+# Lens Studio — local editor state
+Workspaces/
+PluginsUserPreferences/
+*.lock
+
+# Secrets — never commit
+# NOTE: a .gitignore alone does NOT protect keys embedded in tracked source
+# or in Assets/Scene.scene. See SETUP.md before committing credential changes.
+*.env
+secrets.json
+FengshuiSecrets.ts
+
+# OS
+.DS_Store
+Thumbs.db

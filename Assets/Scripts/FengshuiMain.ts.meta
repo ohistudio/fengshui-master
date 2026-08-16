@@ -1,0 +1,55 @@
+- !<AssetImportMetadata/4bc34ca6-9772-4c26-9666-88c43ae7fcad>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 21a392aa-7b72-4289-ba7a-a84d3f70a548
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 21a392aa-7b72-4289-ba7a-a84d3f70a548
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 9617248d-5f82-49c7-9e30-bd2589bfb029
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/9617248d-5f82-49c7-9e30-bd2589bfb029>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 4da2a115-e578-45c0-bc5a-10d366bdfdc5
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    depthCache: false
+    spatialImage: false
+    spatialImageObject: false
+    uiHud: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - uiHud: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      spatialImage: !<reference.ScriptComponent> 00000000-0000-0000-0000-000000000000
+      spatialImageObject: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      depthCache: !<MappingBased.AssignableType_2> 00000000-0000-0000-0000-000000000000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - // @input AssignableType_1 uiHud
+    - // @input Component.ScriptComponent spatialImage
+    - // @input SceneObject spatialImageObject
+    - // @input AssignableType_2 depthCache

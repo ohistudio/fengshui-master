@@ -1,0 +1,16 @@
+- !<AssetImportMetadata/a0961eb2-1252-42e5-9697-42e273245078>
+  ImportedAssetIds:
+    CameraModule: !<reference> 6d397560-735b-4bcd-80b1-bb084ce2d4cb
+  ImporterName: CameraModuleImporter
+  PrimaryAsset: !<reference> 6d397560-735b-4bcd-80b1-bb084ce2d4cb
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    {}
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000

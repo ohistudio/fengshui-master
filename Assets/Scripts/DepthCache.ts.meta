@@ -1,0 +1,46 @@
+- !<AssetImportMetadata/9871cd88-3a43-4dbf-a430-64e619d74cd9>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 394e95da-8552-401f-b7e8-86e21d9faac6
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 394e95da-8552-401f-b7e8-86e21d9faac6
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> e6459cca-35f4-443c-acac-0de34bdb6b20
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/e6459cca-35f4-443c-acac-0de34bdb6b20>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 5dbefcdd-b46c-4770-9909-c0af6023001d
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    camModule: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - camModule: !<reference.CameraModule> 00000000-0000-0000-0000-000000000000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @input Asset.CameraModule camModule {"hint":"Camera module used to request the color camera feed"}'
