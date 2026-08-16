@@ -11,9 +11,11 @@ assess again, and watch your score climb toward a target.
 Built with **CLAD** — Claude driving Lens Studio through MCP. See
 [`CLAD-PROMPT-LOG.md`](CLAD-PROMPT-LOG.md).
 
-## Demo video
+## Demo
 
-[`docs/fengshui-master-demo.mp4`](docs/fengshui-master-demo.mp4) — one-minute walkthrough.
+[![Watch the one-minute demo](docs/demo-poster.png)](https://github.com/ohistudio/fengshui-master/raw/main/docs/fengshui-master-demo.mp4)
+
+**▶ [Watch the one-minute walkthrough](https://github.com/ohistudio/fengshui-master/raw/main/docs/fengshui-master-demo.mp4)** *(60s, 45 MB)*
 
 ## The theme
 
